@@ -1,3 +1,5 @@
+import Icon from './icons';
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -20,7 +22,9 @@ export default function Pagination({
         onClick={() => onPageChange(currentPage - 1)}
         disabled={!hasPrev}
         aria-label="Pagina anterior"
+        className="ghost-button"
       >
+        <Icon name="prev" />
         Anterior
       </button>
       <span>
@@ -31,8 +35,10 @@ export default function Pagination({
         onClick={() => onPageChange(currentPage + 1)}
         disabled={!hasNext}
         aria-label="Pagina siguiente"
+        className="ghost-button"
       >
         Siguiente
+        <Icon name="next" />
       </button>
     </div>
   );

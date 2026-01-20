@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import CharacterCard from '../components/CharacterCard';
+import CharacterCarousel from '../components/CharacterCarousel';
 import EmptyState from '../components/EmptyState';
 import Filters from '../components/Filters';
 import Pagination from '../components/Pagination';
 import SkeletonGrid from '../components/SkeletonGrid';
+import Icon from '../components/icons';
 import useCharacters from '../hooks/useCharacters';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import useFavorites from '../hooks/useFavorites';
@@ -53,21 +55,83 @@ export default function CharactersPage() {
     ));
   }, [data?.results, isFavorite, toggleFavorite]);
 
-  useEffect(() => {
-    if (rawName !== nameInput) setNameInput(rawName);
-    if (rawStatus !== statusInput) setStatusInput(rawStatus);
-    if (rawSpecies !== speciesInput) setSpeciesInput(rawSpecies);
-  }, [rawName, rawStatus, rawSpecies, nameInput, statusInput, speciesInput]);
+  const carouselItems = useMemo(() => {
+    return (
+      data?.results.slice(0, 8).map((character) => ({
+        id: character.id,
+        name: character.name,
+        status: character.status,
+        species: character.species,
+        image: character.image
+      })) ?? []
+    );
+  }, [data?.results]);
+
+  const secondaryCarouselItems = useMemo(() => {
+    return (
+      data?.results.slice(8, 16).map((character) => ({
+        id: character.id,
+        name: character.name,
+        status: character.status,
+        species: character.species,
+        image: character.image
+      })) ?? []
+    );
+  }, [data?.results]);
+
+  const favoriteCarouselItems = useMemo(() => {
+    return favorites.slice(0, 10);
+  }, [favorites]);
+
+  const topAliens = useMemo(() => {
+    return (
+      data?.results
+        .filter((character) =>
+          character.species.toLowerCase().includes('alien')
+        )
+        .slice(0, 3) ?? []
+    );
+  }, [data?.results]);
+
+  const topProtagonists = useMemo(() => {
+    if (!data?.results) return [];
+    const ids = [1, 2, 3];
+    const map = new Map(data.results.map((item) => [item.id, item]));
+    const picked = ids
+      .map((id) => map.get(id))
+      .filter((item): item is typeof data.results[number] => Boolean(item));
+    if (picked.length >= 3) return picked.slice(0, 3);
+    const fallback = data.results.filter((item) => !ids.includes(item.id));
+    return picked.concat(fallback.slice(0, 3 - picked.length));
+  }, [data?.results]);
+
+  const topVillains = useMemo(() => {
+    if (!data?.results) return [];
+    const ids = [118, 119, 157];
+    const map = new Map(data.results.map((item) => [item.id, item]));
+    const picked = ids
+      .map((id) => map.get(id))
+      .filter((item): item is typeof data.results[number] => Boolean(item));
+    if (picked.length >= 3) return picked.slice(0, 3);
+    const fallback = data.results.filter(
+      (item) =>
+        !ids.includes(item.id) &&
+        item.species.toLowerCase().includes('alien')
+    );
+    return picked.concat(fallback.slice(0, 3 - picked.length));
+  }, [data?.results]);
 
   useEffect(() => {
-    const currentName = getSearchValue(searchParams, 'name');
-    const currentStatus = getSearchValue(searchParams, 'status');
-    const currentSpecies = getSearchValue(searchParams, 'species');
+    setNameInput(rawName);
+    setStatusInput(rawStatus);
+    setSpeciesInput(rawSpecies);
+  }, [rawName, rawStatus, rawSpecies]);
 
+  useEffect(() => {
     if (
-      currentName === debouncedName &&
-      currentStatus === statusInput &&
-      currentSpecies === speciesInput
+      rawName === debouncedName &&
+      rawStatus === statusInput &&
+      rawSpecies === speciesInput
     ) {
       return;
     }
@@ -82,11 +146,16 @@ export default function CharactersPage() {
     debouncedName,
     statusInput,
     speciesInput,
-    searchParams,
+    rawName,
+    rawStatus,
+    rawSpecies,
     setSearchParams
   ]);
 
   const onClear = () => {
+    setNameInput('');
+    setStatusInput('');
+    setSpeciesInput('');
     setSearchParams({ page: String(DEFAULT_PAGE) });
   };
 
@@ -96,6 +165,11 @@ export default function CharactersPage() {
     setSearchParams(params, { replace: true });
   };
 
+  const hasActiveFilters =
+    Boolean(nameInput.trim()) ||
+    Boolean(statusInput.trim()) ||
+    Boolean(speciesInput.trim());
+
   return (
     <section className="page">
       <div className="page-header">
@@ -104,6 +178,7 @@ export default function CharactersPage() {
           <h2>Personajes</h2>
         </div>
         <Link to="/favorites" className="ghost-button">
+          <Icon name="heart" />
           Ver favoritos ({favorites.length})
         </Link>
       </div>
@@ -126,6 +201,7 @@ export default function CharactersPage() {
           description="Intenta con otro nombre, estado o especie."
           action={
             <button type="button" onClick={onClear} className="primary-button">
+              <Icon name="filter" />
               Reiniciar filtros
             </button>
           }
@@ -136,6 +212,7 @@ export default function CharactersPage() {
         <div className="error-state" role="alert">
           <p>{getErrorMessage(error)}</p>
           <button type="button" onClick={retry} className="primary-button">
+            <Icon name="spark" />
             Reintentar
           </button>
         </div>
@@ -143,6 +220,78 @@ export default function CharactersPage() {
 
       {!loading && data && (
         <>
+          {!hasActiveFilters && (
+            <>
+              <CharacterCarousel
+                title="Top del momento"
+                items={carouselItems}
+                autoScroll
+                singleItem
+              />
+              <CharacterCarousel
+                title="Vistos recientemente"
+                items={secondaryCarouselItems}
+                autoScroll
+                singleItem
+              />
+              <CharacterCarousel
+                title="Tus favoritos"
+                items={favoriteCarouselItems}
+                autoScroll
+                singleItem
+              />
+              <section className="top-lists">
+                <div className="top-list top-list-compact">
+                  <div className="top-list-header">
+                    <h3>Top 3 Aliens</h3>
+                    <p className="muted">Los mas vistos del multiverso.</p>
+                  </div>
+                  <div className="top-grid">
+                    {topAliens.map((character) => (
+                      <CharacterCard
+                        key={`alien-${character.id}`}
+                        character={character}
+                        isFavorite={isFavorite(character.id)}
+                        onToggleFavorite={() => toggleFavorite(character)}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="top-list">
+                  <div className="top-list-header">
+                    <h3>Protagonistas</h3>
+                    <p className="muted">Los personajes principales.</p>
+                  </div>
+                  <div className="top-grid">
+                    {topProtagonists.map((character) => (
+                      <CharacterCard
+                        key={`hero-${character.id}`}
+                        character={character}
+                        isFavorite={isFavorite(character.id)}
+                        onToggleFavorite={() => toggleFavorite(character)}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="top-list">
+                  <div className="top-list-header">
+                    <h3>Villanos</h3>
+                    <p className="muted">Antagonistas memorables.</p>
+                  </div>
+                  <div className="top-grid">
+                    {topVillains.map((character) => (
+                      <CharacterCard
+                        key={`villain-${character.id}`}
+                        character={character}
+                        isFavorite={isFavorite(character.id)}
+                        onToggleFavorite={() => toggleFavorite(character)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
           <div className="card-grid">{cards}</div>
           <Pagination
             currentPage={page}

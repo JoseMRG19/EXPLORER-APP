@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './icons';
 
 interface FavoriteButtonProps {
   active: boolean;
@@ -19,6 +20,7 @@ export default function FavoriteButton({
       aria-pressed={active}
       aria-label={label}
     >
+      <Icon name="star" />
       {active ? 'Quitar' : 'Favorito'}
     </button>
   );

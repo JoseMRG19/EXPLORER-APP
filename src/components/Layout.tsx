@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import React from 'react';
+import Icon from './icons';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export default function Layout({ children }: LayoutProps) {
               isActive ? 'nav-link active' : 'nav-link'
             }
           >
+            <Icon name="list" />
             Personajes
           </NavLink>
           <NavLink
@@ -29,6 +31,7 @@ export default function Layout({ children }: LayoutProps) {
               isActive ? 'nav-link active' : 'nav-link'
             }
           >
+            <Icon name="heart" />
             Favoritos
           </NavLink>
         </nav>

@@ -5,6 +5,9 @@ import useCharacter from '../hooks/useCharacter';
 import useEpisodes from '../hooks/useEpisodes';
 import useFavorites from '../hooks/useFavorites';
 import { getErrorMessage } from '../utils/errors';
+import Icon from '../components/icons';
+import useCharacters from '../hooks/useCharacters';
+import CharacterCard from '../components/CharacterCard';
 
 export default function CharacterDetailPage() {
   const { id } = useParams();
@@ -13,6 +16,15 @@ export default function CharacterDetailPage() {
     character?.episode ?? []
   );
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { data: relatedData } = useCharacters({
+    species: character?.species,
+    status: character?.gender?.toLowerCase()
+  });
+
+  const relatedCharacters =
+    relatedData?.results
+      .filter((item) => item.id !== character?.id)
+      .slice(0, 4) ?? [];
 
   if (loading) {
     return (
@@ -28,6 +40,7 @@ export default function CharacterDetailPage() {
         <div className="error-state" role="alert">
           <p>{getErrorMessage(error)}</p>
           <button type="button" onClick={retry} className="primary-button">
+            <Icon name="spark" />
             Reintentar
           </button>
         </div>
@@ -43,6 +56,7 @@ export default function CharacterDetailPage() {
           description="No pudimos cargar este personaje."
           action={
             <Link to="/characters" className="primary-button">
+              <Icon name="back" />
               Volver al listado
             </Link>
           }
@@ -54,6 +68,7 @@ export default function CharacterDetailPage() {
   return (
     <section className="page detail-page">
       <Link to="/characters" className="ghost-button">
+        <Icon name="back" />
         Volver al listado
       </Link>
 
@@ -118,6 +133,25 @@ export default function CharacterDetailPage() {
           </ul>
         )}
       </section>
+
+      {relatedCharacters.length > 0 && (
+        <section className="suggested">
+          <div className="suggested-header">
+            <h3>Sugeridos</h3>
+            <p className="muted">Personajes similares por especie y genero.</p>
+          </div>
+          <div className="card-grid">
+            {relatedCharacters.map((item) => (
+              <CharacterCard
+                key={`related-${item.id}`}
+                character={item}
+                isFavorite={isFavorite(item.id)}
+                onToggleFavorite={() => toggleFavorite(item)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </section>
   );
 }
